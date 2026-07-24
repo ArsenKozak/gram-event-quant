@@ -9,6 +9,7 @@ dependencies = [
     "duckdb>=1.0.0",
     "httpx>=0.27.0",
     "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
     "typer>=0.12.0",
     "rich>=13.0.0",
     "loguru>=0.7.2",
@@ -18,7 +19,7 @@ dependencies = [
     "plotly>=5.20.0",
     "openpyxl>=3.1.0",
     "telethon>=1.35.0",
-    "pydantic-settings>=2.14.2",
+    "fastexcel>=0.20.2",
 ]
 
 [dependency-groups]
@@ -28,11 +29,15 @@ dev = [
     "ruff>=0.4.0",
     "mypy>=1.10.0",
     "jupyterlab>=4.2.0",
+    "xlsxwriter>=3.2.0",
 ]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/gram_quant"]
 
 [tool.ruff]
 line-length = 100
@@ -47,6 +52,7 @@ minversion = "8.0"
 addopts = "-ra -q"
 testpaths = ["tests"]
 asyncio_mode = "auto"
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/gram_quant"]
+markers = [
+    "unit: Unit tests for core functions and models",
+    "integration: Integration tests for ETL and external APIs",
+]
