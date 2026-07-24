@@ -1,67 +1,76 @@
-from datetime import UTC
+import asyncio
 from pathlib import Path
 
 import polars as pl
 from loguru import logger
+from pydantic import SecretStr
 from telethon import TelegramClient
-from telethon.tl.types import Message
+from telethon.errors import ChannelPrivateError, FloodWaitError, UsernameInvalidError
 
 
 class TelegramFetcher:
     """
-    Асинхронний парсер новинних повідомлень із публічних Telegram-каналів.
-    Використовує Telethon для витягування історії постів.
+    Асинхронний фетчер для парсингу публічних Telegram-каналів.
+    Підтримує обробку FloodWaitError та перевірку доступності каналу.
     """
 
     def __init__(
         self,
-        api_id: int | None = None,
-        api_hash: str | None = None,
+        api_id: int | None,
+        api_hash: SecretStr | None,
         session_name: str = "data/raw/telegram_session",
     ):
         self.api_id = api_id
-        self.api_hash = api_hash
+        self.api_hash = api_hash.get_secret_value() if api_hash else None
         self.session_path = str(Path(session_name))
 
-    async def fetch_channel_messages(
-        self,
-        channel_username: str = "durov",
-        limit: int = 100,
-        min_id: int = 0,
-    ) -> pl.DataFrame:
+    async def fetch_channel_messages(self, channel_username: str, limit: int = 100) -> pl.DataFrame:
         """
-        Витягує останні `limit` повідомлень з каналу та повертає їх у Polars DataFrame.
+        Завантажує останні N повідомлень з публічного Telegram-каналу.
         """
         if not self.api_id or not self.api_hash:
-            logger.warning(
-                "Telegram API credentials (api_id/api_hash) not provided. "
-                "Returning empty DataFrame."
-            )
-            return pl.DataFrame()
+            raise ValueError("Telegram API ID or API Hash is missing.")
+
+        schema = {
+            "msg_id": pl.Int64,
+            "channel": pl.Utf8,
+            "datetime": pl.Datetime("ms", "UTC"),
+            "text": pl.Utf8,
+            "views": pl.Int64,
+            "forwards": pl.Int64,
+        }
 
         async with TelegramClient(self.session_path, self.api_id, self.api_hash) as client:
-            logger.info(f"Connecting to Telegram API to fetch @{channel_username}...")
+            try:
+                entity = await client.get_entity(channel_username)
+            except (UsernameInvalidError, ValueError):
+                logger.error(f"Channel username '{channel_username}' is invalid or not found.")
+                return pl.DataFrame(schema=schema)
+            except ChannelPrivateError:
+                logger.error(f"Channel '{channel_username}' is private or restricted.")
+                return pl.DataFrame(schema=schema)
+
             records = []
-            
-            async for message in client.iter_messages(channel_username, limit=limit, min_id=min_id):
-                if isinstance(message, Message) and message.text:
-                    # Час публікації завжди в UTC у Telethon
-                    msg_dt = message.date.astimezone(UTC)
-                    records.append({
-                        "message_id": message.id,
-                        "datetime": msg_dt,
-                        "timestamp": int(msg_dt.timestamp() * 1000),
-                        "author": channel_username,
-                        "text": message.text,
-                        "views": message.views or 0,
-                        "forwards": message.forwards or 0,
-                        "url": f"https://t.me/{channel_username}/{message.id}",
-                    })
+            try:
+                async for msg in client.iter_messages(entity, limit=limit):
+                    if not msg.text:
+                        continue
+
+                    records.append(
+                        {
+                            "msg_id": msg.id,
+                            "channel": channel_username,
+                            "datetime": msg.date,
+                            "text": msg.text,
+                            "views": msg.views or 0,
+                            "forwards": msg.forwards or 0,
+                        }
+                    )
+            except FloodWaitError as e:
+                logger.warning(f"Telegram Rate Limit reached. Must wait {e.seconds} seconds.")
+                await asyncio.sleep(e.seconds)
 
             if not records:
-                logger.warning(f"No messages found in @{channel_username}")
-                return pl.DataFrame()
+                return pl.DataFrame(schema=schema)
 
-            df = pl.DataFrame(records).sort("datetime")
-            logger.success(f"Successfully fetched {len(df)} posts from @{channel_username}")
-            return df
+            return pl.DataFrame(records, schema=schema)

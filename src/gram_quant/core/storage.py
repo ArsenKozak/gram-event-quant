@@ -31,9 +31,7 @@ class ParquetStorage:
             existing_df = pl.read_parquet(file_path)
             # Об'єднуємо та видаляємо дублікати за часом (datetime)
             combined_df = (
-                pl.concat([existing_df, df])
-                .unique(subset=["timestamp"])
-                .sort("timestamp")
+                pl.concat([existing_df, df]).unique(subset=["timestamp"]).sort("timestamp")
             )
         else:
             combined_df = df.sort("timestamp")
@@ -42,9 +40,7 @@ class ParquetStorage:
         logger.info(f"Saved {len(combined_df)} candles for {symbol} to {file_path}")
         return file_path
 
-    def load_candles(
-        self, symbol: str, interval: str = "1"
-    ) -> pl.DataFrame:
+    def load_candles(self, symbol: str, interval: str = "1") -> pl.DataFrame:
         """Завантажує збережені свічки з Parquet-файлу."""
         file_path = self._get_candle_path(symbol, interval)
         if not file_path.exists():

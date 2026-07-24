@@ -27,11 +27,11 @@ class ExcelIngestor:
 
     def parse_and_clean(self, df: pl.DataFrame) -> list[NewsEventRaw]:
         """
-        Очищає DataFrame, конвертує часові пояси (Kyiv -> UTC) 
+        Очищає DataFrame, конвертує часові пояси (Kyiv -> UTC)
         та валідує кожен рядок через Pydantic.
         """
         events: list[NewsEventRaw] = []
-        
+
         for row in df.iter_rows(named=True):
             try:
                 # Очищення та приведення часу до UTC
@@ -43,7 +43,7 @@ class ExcelIngestor:
 
                 if dt.tzinfo is None:
                     dt = dt.replace(tzinfo=KYIV_TZ)
-                
+
                 # Зафіксуємо правильний Kyiv time для моделі
                 kyiv_dt = dt.astimezone(KYIV_TZ)
 

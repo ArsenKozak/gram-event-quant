@@ -40,7 +40,7 @@ async def test_bybit_live_fetch_btc():
     """Справжній мережевий тест до публічного API Bybit (BTCUSDT)."""
     fetcher = BybitFetcher()
     df = await fetcher.fetch_kline(symbol="BTCUSDT", category="spot", limit=5)
-    
+
     assert not df.is_empty()
     assert len(df) == 5
     assert "close" in df.columns

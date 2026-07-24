@@ -13,3 +13,9 @@ wheels/
 .env
 data/raw/telegram_session*
 *.session
+
+# Telegram Auth & Sessions
+*.session
+*.session-journal
+data/raw/telegram_session*
+data/processed/*.duckdb
