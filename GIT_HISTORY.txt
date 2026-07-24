@@ -1,0 +1,9 @@
+305cd33 feat(storage): polish DuckDB store with context manager and SQL guards, unify pytest config
+28ba207 feat(storage): polish DuckDB store with context manager and SQL guards, unify pytest config
+5b7b02b feat(fetchers): add Telethon Telegram fetcher with session auth and live tests
+e2d8d36 feat(storage): add parquet cache manager with full unit and integration test coverage
+1c41e10 feat(fetchers): implement async bybit ohlcv fetcher with live integration tests
+a93f943 feat(ingestion): complete excel parser with timezone normalization and pydantic schema validation
+aa67f39 feat(core): add pydantic settings and base test setup
+c434c8e refactor: enforce clean src-layout architecture and hatchling package scope
+aa0235f feat: initialize project structure with uv, polars and dev toolchain
