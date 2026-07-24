@@ -8,3 +8,8 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Local Environment Variables
+.env
+data/raw/telegram_session*
+*.session
