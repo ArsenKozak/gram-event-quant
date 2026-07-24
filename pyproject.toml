@@ -1,0 +1,48 @@
+[project]
+name = "gram-event-quant"
+version = "0.1.0"
+description = "Production-ready Quantitative Event Study Platform for GRAM/TON"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "polars>=1.0.0",
+    "duckdb>=1.0.0",
+    "httpx>=0.27.0",
+    "pydantic>=2.0.0",
+    "typer>=0.12.0",
+    "rich>=13.0.0",
+    "loguru>=0.7.2",
+    "pyarrow>=16.0.0",
+    "scipy>=1.13.0",
+    "statsmodels>=0.14.0",
+    "plotly>=5.20.0",
+    "openpyxl>=3.1.0",
+    "telethon>=1.35.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "ruff>=0.4.0",
+    "mypy>=1.10.0",
+    "jupyterlab>=4.2.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = []
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra -q"
+testpaths = ["tests"]
+asyncio_mode = "auto"
