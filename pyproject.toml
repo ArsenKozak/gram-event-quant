@@ -46,3 +46,6 @@ minversion = "8.0"
 addopts = "-ra -q"
 testpaths = ["tests"]
 asyncio_mode = "auto"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/gram_quant"]
