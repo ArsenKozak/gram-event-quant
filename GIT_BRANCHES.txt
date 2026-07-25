@@ -1,7 +1,0 @@
-  feature/bybit-fetcher       1c41e10 feat(fetchers): implement async bybit ohlcv fetcher with live integration tests
-  feature/duckdb-storage      28ba207 feat(storage): polish DuckDB store with context manager and SQL guards, unify pytest config
-  feature/event-window-slicer 28ba207 feat(storage): polish DuckDB store with context manager and SQL guards, unify pytest config
-  feature/excel-ingestion     a93f943 [origin/feature/excel-ingestion] feat(ingestion): complete excel parser with timezone normalization and pydantic schema validation
-  feature/parquet-cache       e2d8d36 feat(storage): add parquet cache manager with full unit and integration test coverage
-  feature/telegram-fetcher    5b7b02b feat(fetchers): add Telethon Telegram fetcher with session auth and live tests
-* main                        305cd33 [origin/main] feat(storage): polish DuckDB store with context manager and SQL guards, unify pytest config
