@@ -3,6 +3,7 @@ import polars as pl
 
 class MetricsError(ValueError):
     """Викликається при критичних помилках розрахунку метрик."""
+
     pass
 
 
@@ -20,9 +21,7 @@ class MetricsEngine:
         if baseline_check["baseline_count"].min() == 0:
             raise MetricsError("Missing baseline: event without relative_minute == -1")
         if baseline_check["baseline_count"].max() > 1:
-            raise MetricsError(
-                "Duplicate baseline: event with multiple relative_minute == -1"
-            )
+            raise MetricsError("Duplicate baseline: event with multiple relative_minute == -1")
 
         df_metrics = df.with_columns(
             base_close=pl.col("close")

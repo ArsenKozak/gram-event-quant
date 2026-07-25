@@ -7,6 +7,7 @@ from gram_quant.core.schemas import NewsEventRaw
 
 class EventWindowError(ValueError):
     """Викликається, коли неможливо побудувати вікно (наприклад, немає даних)."""
+
     pass
 
 
@@ -35,9 +36,7 @@ class EventSlicer:
         ).sort("timestamp")
 
         if sliced_df.is_empty():
-            raise EventWindowError(
-                f"No candles found in window [{start_bound} - {end_bound}]"
-            )
+            raise EventWindowError(f"No candles found in window [{start_bound} - {end_bound}]")
 
         # 2. Вирівнювання сітки (Upsampling) кожну 1 хвилину
         sliced_df = sliced_df.upsample(time_column="timestamp", every="1m").with_columns(
@@ -50,9 +49,9 @@ class EventSlicer:
 
         # 3. Розрахунок відносної хвилини
         sliced_df = sliced_df.with_columns(
-            (
-                (pl.col("timestamp") - t0).dt.total_seconds() // 60
-            ).cast(pl.Int64).alias("relative_minute")
+            ((pl.col("timestamp") - t0).dt.total_seconds() // 60)
+            .cast(pl.Int64)
+            .alias("relative_minute")
         )
 
         return sliced_df

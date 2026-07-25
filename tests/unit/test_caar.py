@@ -6,12 +6,14 @@ from gram_quant.stats.caar import CAAREngine
 
 @pytest.fixture
 def multi_event_metrics() -> pl.DataFrame:
-    return pl.DataFrame({
-        "event_id": ["e1", "e1", "e2", "e2"],
-        "relative_minute": [0, 1, 0, 1],
-        "cumulative_return": [0.02, 0.04, 0.04, 0.08],
-        "volume_spike": [1.0, 1.5, 3.0, 2.5]
-    })
+    return pl.DataFrame(
+        {
+            "event_id": ["e1", "e1", "e2", "e2"],
+            "relative_minute": [0, 1, 0, 1],
+            "cumulative_return": [0.02, 0.04, 0.04, 0.08],
+            "volume_spike": [1.0, 1.5, 3.0, 2.5],
+        }
+    )
 
 
 def test_caar_basic_calculation_and_sorting(multi_event_metrics):
@@ -29,12 +31,14 @@ def test_caar_basic_calculation_and_sorting(multi_event_metrics):
 
 def test_caar_median_with_outliers():
     """Перевірка стійкості медіани до екстремальних викидів (outliers)."""
-    df = pl.DataFrame({
-        "event_id": ["e1", "e2", "e3"],
-        "relative_minute": [0, 0, 0],
-        "cumulative_return": [0.02, 0.04, 10.0],  # 10.0 - це аномальний викид
-        "volume_spike": [1.0, 1.0, 1.0]
-    })
+    df = pl.DataFrame(
+        {
+            "event_id": ["e1", "e2", "e3"],
+            "relative_minute": [0, 0, 0],
+            "cumulative_return": [0.02, 0.04, 10.0],  # 10.0 - це аномальний викид
+            "volume_spike": [1.0, 1.0, 1.0],
+        }
+    )
 
     engine = CAAREngine()
     res = engine.calculate(df)
@@ -52,12 +56,14 @@ def test_caar_empty_dataframe():
 
 def test_caar_missing_values():
     """Null/None значення не повинні ламати агрегацію."""
-    df = pl.DataFrame({
-        "event_id": ["e1", "e2"],
-        "relative_minute": [0, 0],
-        "cumulative_return": [0.05, None],
-        "volume_spike": [1.0, 2.0]
-    })
+    df = pl.DataFrame(
+        {
+            "event_id": ["e1", "e2"],
+            "relative_minute": [0, 0],
+            "cumulative_return": [0.05, None],
+            "volume_spike": [1.0, 2.0],
+        }
+    )
 
     engine = CAAREngine()
     res = engine.calculate(df)
@@ -69,12 +75,14 @@ def test_caar_missing_values():
 
 def test_caar_duplicate_event_minutes():
     """Два записи для одного івенту в ту саму хвилину мають викликати помилку."""
-    df = pl.DataFrame({
-        "event_id": ["e1", "e1"],
-        "relative_minute": [0, 0],
-        "cumulative_return": [0.02, 0.04],
-        "volume_spike": [1.0, 1.0]
-    })
+    df = pl.DataFrame(
+        {
+            "event_id": ["e1", "e1"],
+            "relative_minute": [0, 0],
+            "cumulative_return": [0.02, 0.04],
+            "volume_spike": [1.0, 1.0],
+        }
+    )
 
     engine = CAAREngine()
     with pytest.raises(ValueError, match="Duplicate relative_minute for the same event_id"):

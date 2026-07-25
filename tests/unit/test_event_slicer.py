@@ -41,14 +41,16 @@ def sample_ohlcv_data() -> pl.DataFrame:
         timestamps.append(dt)
         prices.append(2.0 + (i * 0.001))
 
-    return pl.DataFrame({
-        "timestamp": timestamps,
-        "open": prices,
-        "high": [p + 0.01 for p in prices],
-        "low": [p - 0.01 for p in prices],
-        "close": prices,
-        "volume": [1000.0] * len(prices),
-    })
+    return pl.DataFrame(
+        {
+            "timestamp": timestamps,
+            "open": prices,
+            "high": [p + 0.01 for p in prices],
+            "low": [p - 0.01 for p in prices],
+            "close": prices,
+            "volume": [1000.0] * len(prices),
+        }
+    )
 
 
 def test_slice_event_window_full_gap_and_ohlc(sample_event, sample_ohlcv_data):
@@ -82,9 +84,7 @@ def test_event_out_of_range(sample_event, sample_ohlcv_data):
     slicer = EventSlicer(pre_event_minutes=60, post_event_minutes=120)
 
     # Змінюємо час події на 2025 рік, коли даних немає
-    sample_event.event_time_kyiv = datetime(
-        2025, 1, 1, 14, 0, 0, tzinfo=ZoneInfo("Europe/Kyiv")
-    )
+    sample_event.event_time_kyiv = datetime(2025, 1, 1, 14, 0, 0, tzinfo=ZoneInfo("Europe/Kyiv"))
 
     with pytest.raises(EventWindowError, match="No candles found"):
         slicer.slice_window(sample_event, sample_ohlcv_data)
