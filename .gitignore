@@ -19,3 +19,5 @@ data/raw/telegram_session*
 *.session-journal
 data/raw/telegram_session*
 data/processed/*.duckdb
+data/raw/
+data/processed/raw_ohlcv_full.csv

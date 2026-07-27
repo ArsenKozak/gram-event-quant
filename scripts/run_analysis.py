@@ -14,6 +14,7 @@ from gram_quant.engine.metrics import MetricsEngine, MetricsError
 from gram_quant.fetchers.bybit import BybitFetcher
 from gram_quant.fetchers.telegram import TelegramFetcher
 from gram_quant.stats.caar import CAAREngine
+from gram_quant.storage.duckdb_store import DuckDBStore
 from gram_quant.visualization.report import EventStudyReport
 
 LOGGER_NAME = "GramEventQuant"
@@ -23,8 +24,8 @@ TELEGRAM_SESSION_NAME = "telegram_session"
 BYBIT_EVENT_SYMBOL = "GRAMUSDT"
 BYBIT_BASELINE_SYMBOL = "BTCUSDT"
 BYBIT_INTERVAL = "1"
-TELEGRAM_FETCH_START_DATE = datetime(2025, 6, 1, tzinfo=UTC)
-BYBIT_FETCH_START_DATE = datetime(2025, 6, 1, tzinfo=UTC)
+TELEGRAM_FETCH_START_DATE = datetime(2021, 6, 29, tzinfo=UTC)
+BYBIT_FETCH_START_DATE = datetime(2021, 6, 29, tzinfo=UTC)
 PRE_EVENT_MINUTES = 60
 POST_EVENT_MINUTES = 120
 REPORT_FILE_NAME = "event_study_report.html"
@@ -168,7 +169,17 @@ def safe_write_csv(df: pl.DataFrame, path: Path) -> None:
         logger.info("Saved CSV to %s", path)
 
 
-def export_full_market_data(ton_df: pl.DataFrame, btc_df: pl.DataFrame) -> None:
+def safe_write_parquet(df: pl.DataFrame, path: Path) -> None:
+    try:
+        df.write_parquet(path)
+    except Exception as error:
+        logger.warning("Failed to save %s: %s", path, error)
+    else:
+        logger.info("Saved Parquet to %s", path)
+
+
+def export_full_market_data_duckdb(ton_df: pl.DataFrame, btc_df: pl.DataFrame) -> None:
+    """Store raw OHLCV candles in DuckDB within data/raw/ for efficient querying."""
     datasets = []
 
     for symbol, dataframe in ((BYBIT_EVENT_SYMBOL, ton_df), (BYBIT_BASELINE_SYMBOL, btc_df)):
@@ -181,21 +192,36 @@ def export_full_market_data(ton_df: pl.DataFrame, btc_df: pl.DataFrame) -> None:
                 pl.col("timestamp")
                 .dt.replace_time_zone("UTC")
                 .dt.strftime("%Y-%m-%dT%H:%M:%SZ")
-                .alias("timestamp"),
+                .alias("timestamp_str"),
             )
         )
 
     if not datasets:
-        logger.warning("No market data available for raw export.")
+        logger.warning("No market data available for DuckDB export.")
         return
 
     raw_ohlcv_full = pl.concat(datasets, how="vertical")
-    safe_write_csv(raw_ohlcv_full, Path(settings.data_processed_dir) / "raw_ohlcv_full.csv")
+    
+    try:
+        raw_dir = Path(settings.data_raw_dir)
+        raw_dir.mkdir(parents=True, exist_ok=True)
+        
+        parquet_path = raw_dir / "ohlcv_full.parquet"
+        safe_write_parquet(raw_ohlcv_full, parquet_path)
+        
+        with DuckDBStore(db_path=str(raw_dir / "gram_quant.duckdb")) as store:
+            store.conn.execute(
+                f"CREATE OR REPLACE TABLE ohlcv_raw AS SELECT * FROM read_parquet('{parquet_path}')"
+            )
+            logger.info("Stored raw OHLCV data in DuckDB at %s", raw_dir / "gram_quant.duckdb")
+    except Exception as error:
+        logger.warning("Failed to store market data in DuckDB: %s", error)
 
 
 def export_telegram_messages(messages_df: pl.DataFrame) -> None:
+    """Export lightweight Telegram message metadata to data/processed/."""
     if messages_df.is_empty():
-        logger.warning("No Telegram messages available for raw export.")
+        logger.warning("No Telegram messages available for export.")
         return
 
     messages_export = messages_df.select(["msg_id", "datetime", "channel", "text"]).with_columns(
@@ -209,6 +235,7 @@ def export_telegram_messages(messages_df: pl.DataFrame) -> None:
 
 
 def export_events_merged_with_candles(metrics_df: pl.DataFrame, events_df: pl.DataFrame) -> None:
+    """Export event-window metrics merged with candle data to data/processed/."""
     if metrics_df.is_empty():
         logger.warning("No event metrics available for merged export.")
         return
@@ -316,7 +343,7 @@ async def main() -> None:
         btc_df.height,
     )
 
-    export_full_market_data(ton_df, btc_df)
+    export_full_market_data_duckdb(ton_df, btc_df)
     export_telegram_messages(messages_df)
 
     slicer = EventSlicer(pre_event_minutes=PRE_EVENT_MINUTES, post_event_minutes=POST_EVENT_MINUTES)

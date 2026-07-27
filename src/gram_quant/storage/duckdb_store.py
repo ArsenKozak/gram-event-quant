@@ -12,7 +12,7 @@ class DuckDBStore:
     над Parquet-кешем та ін-пам'ять Polars DataFrame.
     """
 
-    def __init__(self, db_path: str = "data/processed/gram_quant.duckdb"):
+    def __init__(self, db_path: str = "data/raw/gram_quant.duckdb"):
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.conn = duckdb.connect(str(self.db_path))
