@@ -13,9 +13,75 @@ class BybitFetcher:
     """
 
     BASE_URL = "https://api.bybit.com/v5/market/kline"
+    GRAM_REBRAND_DATE = datetime(2026, 6, 22, 0, 0, 0, tzinfo=UTC)
 
     def __init__(self, timeout: float = 10.0):
         self.timeout = timeout
+
+    async def fetch_synthetic_kline(
+        self,
+        symbol: str = "GRAMUSDT",
+        category: str = "spot",
+        interval: str = "1",
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+    ) -> pl.DataFrame:
+        """
+        Завантажує та зшиває безперервну історію для TON/GRAM.
+        Якщо symbol - GRAMUSDT або TONUSDT і діапазон перетинає червень 2026:
+        1. Тягне TONUSDT до 22.06.2026
+        2. Тягне GRAMUSDT після 22.06.2026
+        3. Зшиває їх 1:1 по timestamp.
+        Для інших тикерів (BTCUSDT) викликає звичайний fetch_kline.
+        """
+        clean_symbol = symbol.upper().strip()
+
+        # Якщо запит не стосується TON/GRAM, робимо звичайний виклик
+        if clean_symbol not in ("TONUSDT", "GRAMUSDT"):
+            return await self.fetch_kline(
+                symbol=clean_symbol,
+                category=category,
+                interval=interval,
+                start_time=start_time,
+                end_time=end_time,
+            )
+
+        dfs = []
+
+        # 1. Запит для TONUSDT (до ребрендингу)
+        if start_time is None or start_time < self.GRAM_REBRAND_DATE:
+            ton_end = min(end_time, self.GRAM_REBRAND_DATE) if end_time else self.GRAM_REBRAND_DATE
+            df_ton = await self.fetch_kline(
+                symbol="TONUSDT",
+                category=category,
+                interval=interval,
+                start_time=start_time,
+                end_time=ton_end,
+            )
+            if not df_ton.is_empty():
+                dfs.append(df_ton)
+
+        # 2. Запит для GRAMUSDT (після ребрендингу)
+        if end_time is None or end_time >= self.GRAM_REBRAND_DATE:
+            gram_start = (
+                max(start_time, self.GRAM_REBRAND_DATE) if start_time else self.GRAM_REBRAND_DATE
+            )
+            df_gram = await self.fetch_kline(
+                symbol="GRAMUSDT",
+                category=category,
+                interval=interval,
+                start_time=gram_start,
+                end_time=end_time,
+            )
+            if not df_gram.is_empty():
+                dfs.append(df_gram)
+
+        if not dfs:
+            return pl.DataFrame()
+
+        # 3. Зшиваємо та сортуємо
+        full_df = pl.concat(dfs).unique(subset=["timestamp"]).sort("datetime")
+        return full_df
 
     async def fetch_kline(
         self,
