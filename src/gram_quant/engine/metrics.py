@@ -1,4 +1,3 @@
-from typing import Tuple
 import polars as pl
 
 from gram_quant.stats.market_model import calculate_market_model_ar
@@ -35,25 +34,25 @@ class MetricsEngine:
             .filter(pl.col("relative_minute") < 0)
             .mean()
             .over("event_id"),
-            )
+        )
 
         df_metrics = df_metrics.with_columns(
             cumulative_return=(pl.col("close") - pl.col("base_close")) / pl.col("base_close"),
             volume_spike=pl.when(pl.col("base_volume") > 0)
             .then(pl.col("volume") / pl.col("base_volume"))
             .otherwise(None),
-            )
+        )
 
         return df_metrics.drop(["base_close", "base_volume"])
 
     def calculate_market_adjusted_metrics(
-            self,
-            estimation_df: pl.DataFrame,
-            event_df: pl.DataFrame,
-            asset_col: str = "returns_asset",
-            market_col: str = "returns_market",
-            event_time_col: str = "relative_minute",
-    ) -> Tuple[pl.DataFrame, float, float]:
+        self,
+        estimation_df: pl.DataFrame,
+        event_df: pl.DataFrame,
+        asset_col: str = "returns_asset",
+        market_col: str = "returns_market",
+        event_time_col: str = "relative_minute",
+    ) -> tuple[pl.DataFrame, float, float]:
         """
         Обчислює Clean AR та CAR на основі OLS-регресії проти ринку (BTC).
 
@@ -78,8 +77,6 @@ class MetricsEngine:
         if event_time_col in result_df.columns:
             result_df = result_df.sort(event_time_col)
 
-        result_df = result_df.with_columns(
-            pl.col("abnormal_return").cum_sum().alias("car")
-        )
+        result_df = result_df.with_columns(pl.col("abnormal_return").cum_sum().alias("car"))
 
         return result_df, alpha, beta

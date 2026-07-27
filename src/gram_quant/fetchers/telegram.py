@@ -16,20 +16,20 @@ class TelegramFetcher:
     """
 
     def __init__(
-        self,
-        api_id: int | None,
-        api_hash: SecretStr | None,
-        session_name: str = "data/raw/telegram_session",
+            self,
+            api_id: int | None,
+            api_hash: SecretStr | None,
+            session_name: str = "data/raw/telegram_session",
     ):
         self.api_id = api_id
         self.api_hash = api_hash.get_secret_value() if api_hash else None
         self.session_path = str(Path(session_name))
 
     async def fetch_channel_messages(
-        self,
-        channel_username: str,
-        limit: int | None = None,
-        start_date: datetime | None = None,
+            self,
+            channel_username: str,
+            limit: int | None = None,
+            start_date: datetime | None = None,
     ) -> pl.DataFrame:
         """
         Завантажує повідомлення з публічного Telegram-каналу.
@@ -38,7 +38,8 @@ class TelegramFetcher:
         if not self.api_id or not self.api_hash:
             raise ValueError("Telegram API ID or API Hash is missing.")
 
-        schema = {
+        # Явна типізація для Mypy, оскільки тут є і класи, і інстанси класів Polars
+        schema: dict[str, type[pl.DataType] | pl.DataType] = {
             "msg_id": pl.Int64,
             "channel": pl.Utf8,
             "datetime": pl.Datetime("ms", "UTC"),

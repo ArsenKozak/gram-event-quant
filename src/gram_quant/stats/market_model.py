@@ -1,13 +1,13 @@
-from typing import Tuple
-import polars as pl
 import numpy as np
+import polars as pl
+
 
 def calculate_market_model_ar(
     estimation_df: pl.DataFrame,
     event_df: pl.DataFrame,
     asset_col: str = "returns_asset",
     market_col: str = "returns_market",
-) -> Tuple[pl.DataFrame, float, float]:
+) -> tuple[pl.DataFrame, float, float]:
     """
     Оцінює Market Model через OLS регресію та розраховує аномальну дохідність (AR).
 
@@ -23,9 +23,9 @@ def calculate_market_model_ar(
 
     # 2. Очищення від null ТА NaN (Polars розрізняє null i nan)
     clean_est = estimation_df.filter(
-        pl.col(asset_col).is_not_null() 
-        & pl.col(asset_col).is_not_nan() 
-        & pl.col(market_col).is_not_null() 
+        pl.col(asset_col).is_not_null()
+        & pl.col(asset_col).is_not_nan()
+        & pl.col(market_col).is_not_null()
         & pl.col(market_col).is_not_nan()
     )
 
@@ -48,9 +48,7 @@ def calculate_market_model_ar(
 
     # 6. Векторизований розрахунок AR у event_df через Polars
     result_df = event_df.with_columns(
-        (
-            pl.col(asset_col) - (alpha + beta * pl.col(market_col))
-        ).alias("abnormal_return")
+        (pl.col(asset_col) - (alpha + beta * pl.col(market_col))).alias("abnormal_return")
     )
 
     return result_df, alpha, beta

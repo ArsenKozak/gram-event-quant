@@ -6,6 +6,7 @@ GRAM_REBRAND_DATE = datetime(2026, 6, 22, 0, 0, 0)
 
 TickerType = Literal["TONUSDT", "GRAMUSDT"]
 
+
 class TickerResolver:
     """
     Квант-модуль для мапінгу часових міток подій на відповідні тикери

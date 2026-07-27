@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+
 import plotly.graph_objects as go
 import polars as pl
 from plotly.subplots import make_subplots
@@ -95,6 +96,71 @@ class EventStudyReport:
         """Зберігає графік у закритий автономний HTML-файл."""
         fig.write_html(output_path, include_plotlyjs="cdn")
 
+    def build_individual_car_figure(
+        self, metrics_df: pl.DataFrame, caar_df: pl.DataFrame, ticker: str = "GRAMUSDT"
+    ) -> go.Figure:
+        """
+        Рендерить графік індивідуальних CAR для кожної події разом з усередненим CAAR.
+        Використовується для дебагу стабільності сигналу (пошуку аномальних викидів).
+        """
+        fig = go.Figure()
+
+        if not metrics_df.is_empty():
+            # Розбиваємо датафрейм на окремі партиції (ізольовані треди подій)
+            events = metrics_df.partition_by("event_id")
+
+            for event_data in events:
+                event_data = event_data.sort("relative_minute")
+                event_id = event_data["event_id"][0]
+
+                # Додаємо графік кожного CAR як напівпрозору лінію
+                fig.add_trace(
+                    go.Scatter(
+                        x=event_data["relative_minute"].to_list(),
+                        y=event_data["car"].to_list(),
+                        mode="lines",
+                        name=f"Event {event_id}",
+                        line={"width": 1, "color": "rgba(150, 150, 150, 0.3)"},
+                        showlegend=False,
+                        hoverinfo="text",
+                        hovertext=f"ID: {event_id}",
+                    )
+                )
+
+        # Додаємо головний агрегований процес (CAAR) як масивну лінію поверх усіх
+        if not caar_df.is_empty():
+            fig.add_trace(
+                go.Scatter(
+                    x=caar_df["relative_minute"].to_list(),
+                    y=caar_df["mean_return"].to_list(),
+                    mode="lines",
+                    name="Mean CAAR",
+                    line={"color": "#1f77b4", "width": 4},
+                )
+            )
+
+        # Маркер часу нуль (виклик тригера)
+        fig.add_vline(
+            x=0,
+            line_width=2,
+            line_dash="dot",
+            line_color="red",
+            annotation_text="T0 (Trigger)",
+            annotation_position="top left",
+        )
+
+        fig.update_layout(
+            title=f"Individual Event CARs vs Mean CAAR — {ticker}",
+            xaxis_title="Relative Minute",
+            yaxis_title="Cumulative Abnormal Return (CAR)",
+            template="plotly_white",
+            height=700,
+            showlegend=True,
+            legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1},
+        )
+
+        return fig
+
     def export_html_report(
         self,
         df_events: pl.DataFrame,
@@ -116,17 +182,17 @@ class EventStudyReport:
             "events": events_data,
         }
 
-        json_payload_str = json.dumps(payload, ensure_ascii=False, indent=2)
+        json_payload_str = json.dumps(payload, ensure_ascii=False, indent=2, default=str)
 
         table_rows = ""
         for e in events_data:
             table_rows += f"""
                 <tr>
-                    <td>{e.get('event_id', '')}</td>
-                    <td><span class="hotness-badge">{e.get('hotness_score', 0.0):.2f}</span></td>
-                    <td>{e.get('car', 0.0):.4f}</td>
-                    <td>{e.get('volume_spike', 0.0):.2f}x</td>
-                    <td>{e.get('post_text', '')}</td>
+                    <td>{e.get("event_id", "")}</td>
+                    <td><span class="hotness-badge">{e.get("hotness_score", 0.0):.2f}</span></td>
+                    <td>{e.get("car", 0.0):.4f}</td>
+                    <td>{e.get("volume_spike", 0.0):.2f}x</td>
+                    <td>{e.get("post_text", "")}</td>
                 </tr>"""
 
         html_content = f"""<!DOCTYPE html>
@@ -153,7 +219,10 @@ class EventStudyReport:
     
     <div class="card">
         <h2>Event Analytics Overview</h2>
-        {"<div class='empty-state'>Немає даних для відображення</div>" if is_empty else f"""
+        {
+            "<div class='empty-state'>Немає даних для відображення</div>"
+            if is_empty
+            else f'''
         <table>
             <thead>
                 <tr>
@@ -167,7 +236,8 @@ class EventStudyReport:
             <tbody>{table_rows}
             </tbody>
         </table>
-        """}
+        '''
+        }
     </div>
 
     <!-- Embedded Structured Data Payload for Contract Testing & Client Hydration -->

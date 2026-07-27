@@ -29,9 +29,7 @@ def calculate_hotness_score(
     )
 
     # 3. Обчислення абсолютного значення CAR (бо дамп — це теж гаряча новина)
-    df_clean = df_clean.with_columns(
-        pl.col("_clean_car").abs().alias("_abs_car")
-    )
+    df_clean = df_clean.with_columns(pl.col("_clean_car").abs().alias("_abs_car"))
 
     # 4. Нормалізація (MinMax scaling з зародишем безпеки від ділення на 0)
     max_car = df_clean["_abs_car"].max() or 0.0
@@ -43,17 +41,9 @@ def calculate_hotness_score(
     range_vol = max_vol - min_vol
 
     # Якщо розмах = 0 (наприклад, 1 елемент або всі однакові), ставимо 1.0 скор
-    norm_car_expr = (
-        (pl.col("_abs_car") - min_car) / range_car
-        if range_car > 0
-        else pl.lit(1.0)
-    )
+    norm_car_expr = (pl.col("_abs_car") - min_car) / range_car if range_car > 0 else pl.lit(1.0)
 
-    norm_vol_expr = (
-        (pl.col("_clean_vol") - min_vol) / range_vol
-        if range_vol > 0
-        else pl.lit(1.0)
-    )
+    norm_vol_expr = (pl.col("_clean_vol") - min_vol) / range_vol if range_vol > 0 else pl.lit(1.0)
 
     result_df = df_clean.with_columns(
         (weight_car * norm_car_expr + weight_vol * norm_vol_expr).alias("hotness_score")

@@ -36,10 +36,18 @@ class ExcelIngestor:
             try:
                 # Очищення та приведення часу до UTC
                 raw_time = row.get("time") or row.get("час") or row.get("event_time")
+
+                # Guard Clause для уникнення AttributeError (тихі баги з None)
+                if raw_time is None:
+                    continue
+
+                # Type Casting
                 if isinstance(raw_time, str):
                     dt = datetime.fromisoformat(raw_time)
-                else:
+                elif isinstance(raw_time, datetime):
                     dt = raw_time
+                else:
+                    continue
 
                 if dt.tzinfo is None:
                     dt = dt.replace(tzinfo=KYIV_TZ)
