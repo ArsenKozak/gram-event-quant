@@ -1,0 +1,107 @@
+.
+├── data
+│   ├── processed
+│   │   ├── event_study_report.html
+│   │   ├── events_merged_with_candles.csv
+│   │   ├── raw_ohlcv_full.csv
+│   │   └── telegram_messages.csv
+│   └── raw
+│       ├── telegram_session.session
+│       └── test_telegram_session.session
+├── PROJECT_pyproject.toml
+├── PROJECT_uv.lock
+├── pyproject.toml
+├── README.md
+├── scripts
+│   ├── __pycache__
+│   │   └── run_analysis.cpython-313.pyc
+│   ├── auth_telegram.py
+│   └── run_analysis.py
+├── src
+│   └── gram_quant
+│       ├── __init__.py
+│       ├── __pycache__
+│       │   └── __init__.cpython-313.pyc
+│       ├── cli.py
+│       ├── core
+│       │   ├── __init__.py
+│       │   ├── __pycache__
+│       │   │   ├── __init__.cpython-313.pyc
+│       │   │   ├── config.cpython-313.pyc
+│       │   │   ├── schemas.cpython-313.pyc
+│       │   │   └── storage.cpython-313.pyc
+│       │   ├── config.py
+│       │   ├── schemas.py
+│       │   └── storage.py
+│       ├── db
+│       │   └── __init__.py
+│       ├── engine
+│       │   ├── __init__.py
+│       │   ├── __pycache__
+│       │   │   ├── __init__.cpython-313.pyc
+│       │   │   ├── event_slicer.cpython-313.pyc
+│       │   │   ├── ingestion.cpython-313.pyc
+│       │   │   └── metrics.cpython-313.pyc
+│       │   ├── event_slicer.py
+│       │   ├── ingestion.py
+│       │   └── metrics.py
+│       ├── fetchers
+│       │   ├── __init__.py
+│       │   ├── __pycache__
+│       │   │   ├── __init__.cpython-313.pyc
+│       │   │   ├── bybit.cpython-313.pyc
+│       │   │   └── telegram.cpython-313.pyc
+│       │   ├── bybit.py
+│       │   └── telegram.py
+│       ├── stats
+│       │   ├── __init__.py
+│       │   ├── __pycache__
+│       │   │   ├── __init__.cpython-313.pyc
+│       │   │   └── caar.cpython-313.pyc
+│       │   └── caar.py
+│       ├── storage
+│       │   ├── __init__.py
+│       │   ├── __pycache__
+│       │   │   ├── __init__.cpython-313.pyc
+│       │   │   └── duckdb_store.cpython-313.pyc
+│       │   └── duckdb_store.py
+│       └── visualization
+│           ├── __init__.py
+│           ├── __pycache__
+│           │   ├── __init__.cpython-313.pyc
+│           │   └── report.cpython-313.pyc
+│           └── report.py
+├── struct.txt
+├── tests
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   ├── __init__.cpython-313.pyc
+│   │   ├── test_bybit_fetcher.cpython-313-pytest-9.1.1.pyc
+│   │   ├── test_excel_ingest.cpython-313-pytest-9.1.1.pyc
+│   │   └── test_storage.cpython-313-pytest-9.1.1.pyc
+│   ├── fixtures
+│   │   ├── generate_fixtures.py
+│   │   └── sample_events.xlsx
+│   ├── integration
+│   │   ├── __init__.py
+│   │   ├── __pycache__
+│   │   │   ├── __init__.cpython-313.pyc
+│   │   │   ├── test_bybit_integration.cpython-313-pytest-9.1.1.pyc
+│   │   │   ├── test_excel_ingestion.cpython-313-pytest-9.1.1.pyc
+│   │   │   └── test_telegram_fetcher.cpython-313-pytest-9.1.1.pyc
+│   │   ├── test_bybit_integration.py
+│   │   ├── test_excel_ingestion.py
+│   │   └── test_telegram_fetcher.py
+│   └── unit
+│       ├── __init__.py
+│       ├── __pycache__
+│       │   ├── __init__.cpython-313.pyc
+│       │   ├── test_caar.cpython-313-pytest-9.1.1.pyc
+│       │   ├── test_event_slicer.cpython-313-pytest-9.1.1.pyc
+│       │   ├── test_metrics.cpython-313-pytest-9.1.1.pyc
+│       │   └── test_visualizer.cpython-313-pytest-9.1.1.pyc
+│       ├── test_caar.py
+│       ├── test_event_slicer.py
+│       ├── test_metrics.py
+│       └── test_visualizer.py
+└── uv.lock
