@@ -1,5 +1,6 @@
 import asyncio
 from datetime import UTC, datetime
+from typing import Any
 
 import httpx
 import polars as pl
@@ -19,12 +20,12 @@ class BybitFetcher:
         self.timeout = timeout
 
     async def fetch_synthetic_kline(
-        self,
-        symbol: str = "GRAMUSDT",
-        category: str = "spot",
-        interval: str = "1",
-        start_time: datetime | None = None,
-        end_time: datetime | None = None,
+            self,
+            symbol: str = "GRAMUSDT",
+            category: str = "linear",
+            interval: str = "1",
+            start_time: datetime | None = None,
+            end_time: datetime | None = None,
     ) -> pl.DataFrame:
         """
         Завантажує та зшиває безперервну історію для TON/GRAM.
@@ -84,13 +85,13 @@ class BybitFetcher:
         return full_df
 
     async def fetch_kline(
-        self,
-        symbol: str = "BTCUSDT",
-        category: str = "spot",
-        interval: str = "1",
-        start_time: datetime | None = None,
-        end_time: datetime | None = None,
-        limit: int = 1000,
+            self,
+            symbol: str = "BTCUSDT",
+            category: str = "linear",
+            interval: str = "1",
+            start_time: datetime | None = None,
+            end_time: datetime | None = None,
+            limit: int = 1000,
     ) -> pl.DataFrame:
         """
         Завантажує свічки та повертає їх у Polars DataFrame.
@@ -110,7 +111,7 @@ class BybitFetcher:
         start_ms = int(start_time.astimezone(UTC).timestamp() * 1000) if start_time else None
         end_ms = int(end_time.astimezone(UTC).timestamp() * 1000) if end_time else None
 
-        all_records: list[list] = []
+        all_records: list[list[Any]] = []
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             logger.info(
@@ -207,7 +208,7 @@ class BybitFetcher:
             return pl.DataFrame()
 
         # Build unique records keyed by timestamp to avoid duplicates
-        unique_map: dict[int, list] = {}
+        unique_map: dict[int, list[Any]] = {}
         for item in all_records:
             try:
                 ts = int(item[0])
