@@ -229,9 +229,9 @@ async def collect_telegram_events() -> tuple[list[tuple[NewsEventRaw, str]], pl.
 
 async def fetch_market_data(symbol: str, start_time: datetime, end_time: datetime) -> pl.DataFrame:
     fetcher = BybitFetcher()
-    # Використовуємо synthetic метод для зшивання TON та GRAM
-    raw_df = await fetcher.fetch_synthetic_kline(
+    raw_df = await fetcher.fetch_kline(
         symbol=symbol,
+        category="spot",  # Явно вказуємо спот для всієї історії
         interval=BYBIT_INTERVAL,
         start_time=start_time,
         end_time=end_time,

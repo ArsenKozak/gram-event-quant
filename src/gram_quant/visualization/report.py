@@ -189,7 +189,7 @@ class EventStudyReport:
             table_rows += f"""
                 <tr>
                     <td>{e.get("event_id", "")}</td>
-                    <td><span class="hotness-badge">{e.get("hotness_score", 0.0):.2f}</span></td>
+                    <td><span class="hotness-badge">{float(e.get("hotness_score") or 0.0):.2f}</span></td>
                     <td>{e.get("car", 0.0):.4f}</td>
                     <td>{e.get("volume_spike", 0.0):.2f}x</td>
                     <td>{e.get("post_text", "")}</td>
