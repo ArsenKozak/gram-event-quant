@@ -18,11 +18,13 @@ from gram_quant.visualization.report import EventStudyReport
 
 LOGGER_NAME = "GramEventQuant"
 DEFAULT_TELEGRAM_CHANNEL = "durov"
-TELEGRAM_MESSAGE_LIMIT = 50
+TELEGRAM_MESSAGE_LIMIT = None
 TELEGRAM_SESSION_NAME = "telegram_session"
 BYBIT_EVENT_SYMBOL = "GRAMUSDT"
 BYBIT_BASELINE_SYMBOL = "BTCUSDT"
 BYBIT_INTERVAL = "1"
+TELEGRAM_FETCH_START_DATE = datetime(2025, 6, 1, tzinfo=UTC)
+BYBIT_FETCH_START_DATE = datetime(2025, 6, 1, tzinfo=UTC)
 PRE_EVENT_MINUTES = 60
 POST_EVENT_MINUTES = 120
 REPORT_FILE_NAME = "event_study_report.html"
@@ -261,6 +263,7 @@ async def collect_telegram_events() -> tuple[list[tuple[NewsEventRaw, str]], pl.
     messages_df = await fetcher.fetch_channel_messages(
         channel_username=DEFAULT_TELEGRAM_CHANNEL,
         limit=TELEGRAM_MESSAGE_LIMIT,
+        start_date=TELEGRAM_FETCH_START_DATE,
     )
     logger.info("Fetched %s Telegram messages", messages_df.height)
 
@@ -303,7 +306,8 @@ async def main() -> None:
 
     events_df = build_events_dataframe(events)
 
-    fetch_start, fetch_end = build_fetch_window(events)
+    fetch_start = BYBIT_FETCH_START_DATE
+    fetch_end = datetime.now(UTC)
     ton_df = await fetch_market_data(BYBIT_EVENT_SYMBOL, fetch_start, fetch_end)
     btc_df = await fetch_market_data(BYBIT_BASELINE_SYMBOL, fetch_start, fetch_end)
     logger.info(
