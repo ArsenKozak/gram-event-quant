@@ -27,7 +27,7 @@ class ExcelIngestor:
 
     def parse_and_clean(self, df: pl.DataFrame) -> list[NewsEventRaw]:
         """
-        Очищає DataFrame, конвертує часові пояси (Kyiv -> UTC) 
+        Очищає DataFrame, конвертує часові пояси (Kyiv -> UTC)
         та валідує кожен рядок через Pydantic.
         """
         events: list[NewsEventRaw] = []

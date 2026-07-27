@@ -20,7 +20,7 @@ LOGGER_NAME = "GramEventQuant"
 DEFAULT_TELEGRAM_CHANNEL = "durov"
 TELEGRAM_MESSAGE_LIMIT = 50
 TELEGRAM_SESSION_NAME = "telegram_session"
-BYBIT_EVENT_SYMBOL = "TONUSDT"
+BYBIT_EVENT_SYMBOL = "GRAMUSDT"
 BYBIT_BASELINE_SYMBOL = "BTCUSDT"
 BYBIT_INTERVAL = "1"
 PRE_EVENT_MINUTES = 60
@@ -98,6 +98,36 @@ def build_news_events(messages_df: pl.DataFrame) -> list[tuple[NewsEventRaw, str
     return events
 
 
+def build_events_dataframe(events: list[tuple[NewsEventRaw, str]]) -> pl.DataFrame:
+    records: list[dict[str, str | int | datetime | float]] = []
+
+    for event, event_id in events:
+        msg_id_part = event_id.split(":", 1)[1]
+        try:
+            msg_id = int(msg_id_part)
+        except ValueError:
+            msg_id = msg_id_part
+
+        event_time = event.event_time_kyiv
+        if event_time.tzinfo is None:
+            event_time = event_time.replace(tzinfo=UTC)
+
+        records.append(
+            {
+                "event_id": event_id,
+                "msg_id": msg_id,
+                "datetime": event_time,
+                "channel": event.author,
+                "text": event.text,
+                "importance": event.importance,
+                "price_before": event.price_before,
+                "btc_before": event.btc_before,
+            }
+        )
+
+    return pl.DataFrame(records)
+
+
 def build_fetch_window(events: list[tuple[NewsEventRaw, str]]) -> tuple[datetime, datetime]:
     event_times = [event.event_time_kyiv for event, _ in events]
     earliest = min(event_times)
@@ -127,7 +157,97 @@ def build_windowed_events(
     return pl.concat(windows, how="vertical") if windows else pl.DataFrame()
 
 
-async def collect_telegram_events() -> list[tuple[NewsEventRaw, str]]:
+def safe_write_csv(df: pl.DataFrame, path: Path) -> None:
+    try:
+        df.write_csv(path)
+    except Exception as error:
+        logger.warning("Failed to save %s: %s", path, error)
+    else:
+        logger.info("Saved CSV to %s", path)
+
+
+def export_full_market_data(ton_df: pl.DataFrame, btc_df: pl.DataFrame) -> None:
+    datasets = []
+
+    for symbol, dataframe in ((BYBIT_EVENT_SYMBOL, ton_df), (BYBIT_BASELINE_SYMBOL, btc_df)):
+        if dataframe.is_empty():
+            continue
+
+        datasets.append(
+            dataframe.with_columns(
+                pl.lit(symbol).alias("symbol"),
+                pl.col("timestamp")
+                .dt.replace_time_zone("UTC")
+                .dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+                .alias("timestamp"),
+            )
+        )
+
+    if not datasets:
+        logger.warning("No market data available for raw export.")
+        return
+
+    raw_ohlcv_full = pl.concat(datasets, how="vertical")
+    safe_write_csv(raw_ohlcv_full, Path(settings.data_processed_dir) / "raw_ohlcv_full.csv")
+
+
+def export_telegram_messages(messages_df: pl.DataFrame) -> None:
+    if messages_df.is_empty():
+        logger.warning("No Telegram messages available for raw export.")
+        return
+
+    messages_export = messages_df.select(["msg_id", "datetime", "channel", "text"]).with_columns(
+        pl.col("datetime")
+        .dt.replace_time_zone("UTC")
+        .dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+        .alias("datetime")
+    )
+
+    safe_write_csv(messages_export, Path(settings.data_processed_dir) / "telegram_messages.csv")
+
+
+def export_events_merged_with_candles(metrics_df: pl.DataFrame, events_df: pl.DataFrame) -> None:
+    if metrics_df.is_empty():
+        logger.warning("No event metrics available for merged export.")
+        return
+
+    merged_df = metrics_df.join(events_df, on="event_id", how="left").with_columns(
+        pl.col("datetime")
+        .dt.replace_time_zone("UTC")
+        .dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+        .alias("datetime"),
+        pl.col("timestamp")
+        .dt.replace_time_zone("UTC")
+        .dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+        .alias("timestamp"),
+    )
+
+    merged_export = merged_df.select(
+        [
+            "event_id",
+            "msg_id",
+            "datetime",
+            "channel",
+            "text",
+            "importance",
+            "price_before",
+            "btc_before",
+            "timestamp",
+            "relative_minute",
+            "open",
+            "high",
+            "low",
+            "close",
+            "volume",
+            "cumulative_return",
+            "volume_spike",
+        ]
+    )
+
+    safe_write_csv(merged_export, Path(settings.data_processed_dir) / "events_merged_with_candles.csv")
+
+
+async def collect_telegram_events() -> tuple[list[tuple[NewsEventRaw, str]], pl.DataFrame]:
     if not settings.telegram_api_id or not settings.telegram_api_hash:
         raise ValueError("Telegram API credentials are not configured.")
 
@@ -144,7 +264,7 @@ async def collect_telegram_events() -> list[tuple[NewsEventRaw, str]]:
     )
     logger.info("Fetched %s Telegram messages", messages_df.height)
 
-    return build_news_events(messages_df)
+    return build_news_events(messages_df), messages_df
 
 
 async def fetch_market_data(symbol: str, start_time: datetime, end_time: datetime) -> pl.DataFrame:
@@ -172,7 +292,7 @@ async def main() -> None:
     ensure_directories()
 
     try:
-        events = await collect_telegram_events()
+        events, messages_df = await collect_telegram_events()
     except ValueError as error:
         logger.error("%s", error)
         return
@@ -180,6 +300,8 @@ async def main() -> None:
     if not events:
         logger.error("No Telegram events were extracted. Aborting pipeline.")
         return
+
+    events_df = build_events_dataframe(events)
 
     fetch_start, fetch_end = build_fetch_window(events)
     ton_df = await fetch_market_data(BYBIT_EVENT_SYMBOL, fetch_start, fetch_end)
@@ -189,6 +311,9 @@ async def main() -> None:
         ton_df.height,
         btc_df.height,
     )
+
+    export_full_market_data(ton_df, btc_df)
+    export_telegram_messages(messages_df)
 
     slicer = EventSlicer(pre_event_minutes=PRE_EVENT_MINUTES, post_event_minutes=POST_EVENT_MINUTES)
     windowed_df = build_windowed_events(events, ton_df, slicer)
@@ -202,6 +327,8 @@ async def main() -> None:
     except MetricsError as error:
         logger.error("Metrics calculation failed: %s", error)
         return
+
+    export_events_merged_with_candles(metrics_df, events_df)
 
     caar_engine = CAAREngine()
     caar_df = caar_engine.calculate(metrics_df)
